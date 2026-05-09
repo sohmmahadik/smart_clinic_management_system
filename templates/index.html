@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Smart Clinic Management System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 style="color: #667eea; margin-bottom: 15px;">Welcome to Smart Clinic Management System</h2>
+    <p style="color: #666; line-height: 1.6; margin-bottom: 15px;">
+        A comprehensive solution for managing clinic operations efficiently. This system helps you manage patients, doctors, 
+        and appointments with ease and precision.
+    </p>
+</div>
+
+<div class="stats-grid" id="statsGrid"></div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 20px;">
+    <div class="card">
+        <h3>👥 Patient Management</h3>
+        <p style="color: #666; margin: 10px 0;">Add, view, and manage patient information. Search patients quickly by name or contact.</p>
+        <a href="/patients" style="display: inline-block; margin-top: 10px; padding: 8px 15px; background: #667eea; color: white; text-decoration: none; border-radius: 4px;">Manage Patients</a>
+    </div>
+
+    <div class="card">
+        <h3>👨‍⚕️ Doctor Management</h3>
+        <p style="color: #666; margin: 10px 0;">Add and manage doctor information. Track specializations and availability.</p>
+        <a href="/doctors" style="display: inline-block; margin-top: 10px; padding: 8px 15px; background: #667eea; color: white; text-decoration: none; border-radius: 4px;">Manage Doctors</a>
+    </div>
+
+    <div class="card">
+        <h3>📅 Appointment System</h3>
+        <p style="color: #666; margin: 10px 0;">Book appointments with automatic conflict detection and slot suggestions.</p>
+        <a href="/appointments" style="display: inline-block; margin-top: 10px; padding: 8px 15px; background: #667eea; color: white; text-decoration: none; border-radius: 4px;">Manage Appointments</a>
+    </div>
+</div>
+
+<div style="background: #f0f4ff; padding: 20px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #667eea;">
+    <h3 style="color: #667eea; margin-bottom: 10px;">✨ Key Features</h3>
+    <ul style="color: #666; list-position: inside; line-height: 1.8;">
+        <li>Complete patient and doctor management</li>
+        <li>Intelligent appointment scheduling with conflict prevention</li>
+        <li>Priority system (Urgent vs Normal appointments)</li>
+        <li>Auto-suggestion for next available appointment slots</li>
+        <li>Search and filter capabilities</li>
+        <li>RESTful API for integration</li>
+        <li>Clean and intuitive user interface</li>
+    </ul>
+</div>
+
+<script>
+    // Load statistics
+    const loadStats = async () => {
+        try {
+            const response = await fetch('/api/stats');
+            const result = await response.json();
+            
+            if (result.success) {
+                const stats = result.data;
+                const statsGrid = document.getElementById('statsGrid');
+                statsGrid.innerHTML = `
+                    <div class="stat-card">
+                        <h3>Total Patients</h3>
+                        <div class="number">${stats.total_patients}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Doctors</h3>
+                        <div class="number">${stats.total_doctors}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Appointments</h3>
+                        <div class="number">${stats.total_appointments}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Scheduled Today+</h3>
+                        <div class="number">${stats.scheduled_appointments}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Urgent Cases</h3>
+                        <div class="number" style="color: #ff6b6b;">${stats.urgent_appointments}</div>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading stats:', error);
+        }
+    };
+
+    // Load stats on page load
+    document.addEventListener('DOMContentLoaded', loadStats);
+</script>
+{% endblock %}

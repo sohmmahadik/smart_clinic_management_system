@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+
+{% block title %}Patients - Smart Clinic Management System{% endblock %}
+
+{% block content %}
+<h2 style="color: #333; margin-bottom: 20px;">👥 Patient Management</h2>
+
+<div id="alert"></div>
+
+<div class="search-box">
+    <input type="text" id="searchInput" placeholder="Search patients by name or contact..." />
+    <button onclick="searchPatients()">Search</button>
+    <button class="success" onclick="openModal('addPatientModal')">+ Add Patient</button>
+</div>
+
+<div id="loading" class="loading">
+    <div class="spinner"></div>
+    <p>Loading patients...</p>
+</div>
+
+<div id="patientsList"></div>
+
+<!-- Add Patient Modal -->
+<div id="addPatientModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add New Patient</h2>
+            <button class="close" onclick="closeModal('addPatientModal')">&times;</button>
+        </div>
+        <form id="addPatientForm" onsubmit="addPatient(event)">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Full Name *</label>
+                    <input type="text" id="patientName" required />
+                </div>
+                <div class="form-group">
+                    <label>Age *</label>
+                    <input type="number" id="patientAge" required min="1" max="120" />
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Contact Number *</label>
+                    <input type="tel" id="patientContact" required placeholder="10 digit mobile number" />
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="patientEmail" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Address</label>
+                <textarea id="patientAddress" rows="2"></textarea>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" class="secondary" onclick="closeModal('addPatientModal')">Cancel</button>
+                <button type="submit" class="success">Add Patient</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Patient Modal -->
+<div id="editPatientModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Edit Patient</h2>
+            <button class="close" onclick="closeModal('editPatientModal')">&times;</button>
+        </div>
+        <form id="editPatientForm" onsubmit="updatePatient(event)">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Full Name *</label>
+                    <input type="text" id="editPatientName" required />
+                </div>
+                <div class="form-group">
+                    <label>Age *</label>
+                    <input type="number" id="editPatientAge" required min="1" max="120" />
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="editPatientEmail" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Address</label>
+                <textarea id="editPatientAddress" rows="2"></textarea>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" class="secondary" onclick="closeModal('editPatientModal')">Cancel</button>
+                <button type="submit" class="success">Update Patient</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    let currentPatientId = null;
+
+    const loadPatients = async () => {
+        showLoading(true);
+        try {
+            const response = await fetch('/api/patients');
+            const result = await response.json();
+            
+            if (result.success) {
+                displayPatients(result.data);
+            } else {
+                showAlert(result.error || 'Error loading patients', 'error');
+            }
+        } catch (error) {
+            showAlert('Error loading patients: ' + error, 'error');
+        } finally {
+            showLoading(false);
+        }
+    };
+
+    const displayPatients = (patients) => {
+        const patientsList = document.getElementById('patientsList');
+        
+        if (patients.length === 0) {
+            patientsList.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No patients found. Add your first patient!</p>';
+            return;
+        }
+
+        let html = '<table><thead><tr><th>Name</th><th>Age</th><th>Contact</th><th>Email</th><th>Address</th><th>Actions</th></tr></thead><tbody>';
+        
+        patients.forEach(patient => {
+            html += `
+                <tr>
+                    <td>${patient.name}</td>
+                    <td>${patient.age}</td>
+                    <td>${patient.contact}</td>
+                    <td>${patient.email || '-'}</td>
+                    <td>${patient.address || '-'}</td>
+                    <td>
+                        <button onclick="openEditModal(${patient.id})" style="padding: 5px 10px; font-size: 12px;">Edit</button>
+                        <button class="danger" onclick="deletePatient(${patient.id})" style="padding: 5px 10px; font-size: 12px;">Delete</button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table>';
+        patientsList.innerHTML = html;
+    };
+
+    const addPatient = async (event) => {
+        event.preventDefault();
+        
+        const data = {
+            name: document.getElementById('patientName').value,
+            age: parseInt(document.getElementById('patientAge').value),
+            contact: document.getElementById('patientContact').value,
+            email: document.getElementById('patientEmail').value,
+            address: document.getElementById('patientAddress').value
+        };
+
+        try {
+            const response = await fetch('/api/patients/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showAlert('Patient added successfully!', 'success');
+                closeModal('addPatientModal');
+                document.getElementById('addPatientForm').reset();
+                loadPatients();
+            } else {
+                showAlert(result.error || 'Error adding patient', 'error');
+            }
+        } catch (error) {
+            showAlert('Error: ' + error, 'error');
+        }
+    };
+
+    const openEditModal = async (patientId) => {
+        try {
+            const response = await fetch(`/api/patients/${patientId}`);
+            const result = await response.json();
+
+            if (result.success) {
+                const patient = result.data;
+                currentPatientId = patient.id;
+                document.getElementById('editPatientName').value = patient.name;
+                document.getElementById('editPatientAge').value = patient.age;
+                document.getElementById('editPatientEmail').value = patient.email;
+                document.getElementById('editPatientAddress').value = patient.address;
+                openModal('editPatientModal');
+            }
+        } catch (error) {
+            showAlert('Error loading patient: ' + error, 'error');
+        }
+    };
+
+    const updatePatient = async (event) => {
+        event.preventDefault();
+
+        const data = {
+            name: document.getElementById('editPatientName').value,
+            age: parseInt(document.getElementById('editPatientAge').value),
+            email: document.getElementById('editPatientEmail').value,
+            address: document.getElementById('editPatientAddress').value
+        };
+
+        try {
+            const response = await fetch(`/api/patients/${currentPatientId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showAlert('Patient updated successfully!', 'success');
+                closeModal('editPatientModal');
+                loadPatients();
+            } else {
+                showAlert(result.error || 'Error updating patient', 'error');
+            }
+        } catch (error) {
+            showAlert('Error: ' + error, 'error');
+        }
+    };
+
+    const deletePatient = async (patientId) => {
+        if (!confirm('Are you sure you want to delete this patient?')) return;
+
+        try {
+            const response = await fetch(`/api/patients/${patientId}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showAlert('Patient deleted successfully!', 'success');
+                loadPatients();
+            } else {
+                showAlert(result.error || 'Error deleting patient', 'error');
+            }
+        } catch (error) {
+            showAlert('Error: ' + error, 'error');
+        }
+    };
+
+    const searchPatients = async () => {
+        const query = document.getElementById('searchInput').value.trim();
+        
+        if (!query) {
+            loadPatients();
+            return;
+        }
+
+        showLoading(true);
+        try {
+            const response = await fetch(`/api/patients/search?q=${encodeURIComponent(query)}`);
+            const result = await response.json();
+
+            if (result.success) {
+                displayPatients(result.data);
+            } else {
+                showAlert(result.error || 'Error searching patients', 'error');
+            }
+        } catch (error) {
+            showAlert('Error: ' + error, 'error');
+        } finally {
+            showLoading(false);
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', loadPatients);
+</script>
+{% endblock %}
